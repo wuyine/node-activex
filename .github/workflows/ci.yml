@@ -21,7 +21,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.20.2
+          node-version: 14.9.0
       - name: get version
         run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
       - name: create release
@@ -44,7 +44,7 @@ jobs:
       fail-fast: false
       matrix:
         # node-version: ['18.20.2', '20.x', '22.x', '23.x']
-        node-version: ['18.20.2']
+        node-version: ['14.9.0']
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
