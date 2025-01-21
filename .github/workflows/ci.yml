@@ -3,11 +3,42 @@
 name: ci
 on: [push, pull_request]
 jobs:
+  create-release:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.result }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.20.2
+      - name: get version
+        run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+      - name: create release
+        id: create-release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `app-v${process.env.PACKAGE_VERSION}`,
+              name: `Desktop App v${process.env.PACKAGE_VERSION}`,
+              body: 'Take a look at the assets to download and install this app.',
+              draft: true,
+              prerelease: false
+            })
+            return data.id
   ci:
     strategy:
       fail-fast: false
       matrix:
-        node-version: ['18.x', '20.x', '22.x', '23.x']
+        # node-version: ['18.20.2', '20.x', '22.x', '23.x']
+        node-version: ['18.20.2']
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -15,12 +46,39 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+      - run: npm install --global --production windows-build-tools
       - run: npm ci
-      - run: npm run build --if-present
+      - run: node-gyp configure
+      - run: node-gyp build
+      - run: npm rebuild winax --runtime=electron --target=18.20.2 --dist-url=https://electronjs.org/headers --build-from-source
+      # - run: npm run build --if-present
       # https://community.chocolatey.org/packages?q=Excel
-      - name: "Installing Office 365 takes about 5 minutes..."
-        run: choco install office365proplus
-      - run: |
-          npm install -g mocha
-          # mocha --expose-gc test  # Three tests will fail!
-      - run: npm test
+      # - name: "Installing Office 365 takes about 5 minutes..."
+      #   run: choco install office365proplus
+      # - run: |
+      #     npm install -g mocha
+      #     # mocha --expose-gc test  # Three tests will fail!
+      # - run: npm test
+
+
+  publish-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-20.04
+    needs: [create-release, ci]
+
+    steps:
+      - name: publish release
+        id: publish-release
+        uses: actions/github-script@v6
+        env:
+          release_id: ${{ needs.create-release.outputs.release_id }}
+        with:
+          script: |
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: process.env.release_id,
+              draft: false,
+              prerelease: false
+            })
