@@ -52,7 +52,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install --global --production windows-build-tools
+      - run: npm install --global --production windows-build-tools --vs2015
       - run: npm ci
       - run: node-gyp configure
       - run: node-gyp build
