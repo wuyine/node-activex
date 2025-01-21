@@ -1,7 +1,13 @@
 # https://docs.github.com/en/actions/use-cases-and-examples/building-and-testing/building-and-testing-nodejs
 
 name: ci
-on: [push, pull_request]
+# on: [push, pull_request]
+on: 
+  push:
+    tags:
+      - 'v*'
+
+
 jobs:
   create-release:
     permissions:
@@ -64,7 +70,7 @@ jobs:
   publish-release:
     permissions:
       contents: write
-    runs-on: ubuntu-20.04
+    runs-on: windows-latest
     needs: [create-release, ci]
 
     steps:
